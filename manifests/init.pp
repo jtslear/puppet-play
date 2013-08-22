@@ -1,6 +1,6 @@
 # == Class: play
 #
-# Full description of class play here.
+# This will install the play server
 #
 # === Parameters
 #
@@ -29,84 +29,24 @@
 #
 # === Authors
 #
-# Author Name <author@domain.com>
+# John T Skarbek <jtslear@gmail.com>
 #
 # === Copyright
 #
-# Copyright 2013 Your name here, unless otherwise noted.
+# Take this code, I don't care
 #
 class play (
   $mysql_root_password = 'foo',
   $music_directory = '/opt/music',
-) {
+) inherits play::params {
 
-  class { "mysql::server":
-      config_hash => { 
-        "root_password" => "$mysql_root_password",
-      }
+  class { "apt": 
+    always_apt_update => true,
+    before => Class["mysql"],
   }
-  exec { "update":
-    command => "apt-get update",
-     path => "/bin:/usr/bin",
+  class { "mysql": 
+    require => Class["apt"],
   }
 
-  package { [
-      "git",
-    ]:
-    ensure  => "present",
-    require => Exec["update"],
-  }
-
-  define play_user {
-    user { "${name}":
-      ensure => "present",
-      comment => "Muzica User",
-      managehome => true,
-    }
-
-    file { "/opt/music":
-      ensure => "directory",
-      owner => "${name}",
-      group => "${name}",
-      mode => "0777",
-    }
-
-    vcsrepo { "/home/${name}/play":
-      ensure   => "latest",
-      user => "${name}",
-      provider => "git",
-      source   => "git://github.com/play/play.git",
-      revision => "v3",
-      require => User["${name}"],
-    }
-    file { "play.yml":
-      path    => "/home/${name}/play/config/play.yml",
-      owner   => "${name}",
-      group   => "${name}",
-      mode    => "0644",
-      require => Vcsrepo["/home/${name}/play"],
-      content => template("play/play.yml.erb"),
-    }
-    file { "mpd.conf":
-      path    => "/home/${name}/play/config/mpd.conf",
-      owner   => "${name}",
-      group   => "${name}",
-      mode    => "0644",
-      require => Vcsrepo["/home/${name}/play"],
-      content => template("play/mpd.conf.erb"),
-    }
-    rbenv::install { "${name}":
-      home    => "/home/${name}",
-      require => User["${name}"],
-    }
-    rbenv::compile { "2.0.0-p195":
-      user   => "${name}",
-      home   => "/home/${name}",
-      global => true,
-    }
-  }
-
-  play_user { "muzak":
-    require => Package["git"],
-  }
+  Class["apt"] -> Class["mysql"]
 }
