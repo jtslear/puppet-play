@@ -103,7 +103,8 @@ class play (
       home    => "/home/${name}",
       require => User["${name}"],
     }
-    rbenv::compile { "2.0.0-p247":
+    rbenv::compile { "ruby 2.0":
+      ruby   => "2.0.0-p247",
       user   => "${name}",
       home   => "/home/${name}",
       global => true,
