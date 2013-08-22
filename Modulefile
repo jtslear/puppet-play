@@ -12,4 +12,5 @@ project_page 'https://github.com/jtslear/puppet-play'
 dependency 'puppetlabs/vcsrepo', '>=0.1.2'
 dependency 'alup/rbenv', '>=1.2.0'
 dependency 'puppetlabs/mysql', '>=0.9.0'
-
+dependency 'puppetlabs/apt', '>=1.2.0'
+dependency 'puppetlabs/stdlib', '>=4.1.0'

@@ -40,21 +40,25 @@ class play (
   $music_directory = '/opt/music',
 ) {
 
+  stage { 'first':
+    before => Stage["main"],
+  }
+
+  class { "apt":
+    always_apt_update => true,
+    stage             => first,
+  }
+
   class { "mysql::server":
       config_hash => { 
         "root_password" => "$mysql_root_password",
       }
-  }
-  exec { "update":
-    command => "apt-get update",
-     path => "/bin:/usr/bin",
   }
 
   package { [
       "git",
     ]:
     ensure  => "present",
-    require => Exec["update"],
   }
 
   define play_user {
@@ -99,14 +103,12 @@ class play (
       home    => "/home/${name}",
       require => User["${name}"],
     }
-    rbenv::compile { "2.0.0-p195":
+    rbenv::compile { "2.0.0-p247":
       user   => "${name}",
       home   => "/home/${name}",
       global => true,
     }
   }
 
-  play_user { "muzak":
-    require => Package["git"],
-  }
+  play_user { "muzak": }
 }
