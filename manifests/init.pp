@@ -1,52 +1,34 @@
-# == Class: play
-#
-# Full description of class play here.
-#
-# === Parameters
-#
-# Document parameters here.
-#
-# [*sample_parameter*]
-#   Explanation of what this parameter affects and what it defaults to.
-#   e.g. "Specify one or more upstream ntp servers as an array."
-#
-# === Variables
-#
-# Here you should define a list of variables that this module would require.
-#
-# [*sample_variable*]
-#   Explanation of how this variable affects the funtion of this class and if it
-#   has a default. e.g. "The parameter enc_ntp_servers must be set by the
-#   External Node Classifier as a comma separated list of hostnames." (Note,
-#   global variables should not be used in preference to class parameters  as of
-#   Puppet 2.6.)
-#
-# === Examples
-#
-#  class { play:
-#    servers => [ 'pool.ntp.org', 'ntp.local.company.com' ]
-#  }
-#
-# === Authors
-#
-# Author Name <author@domain.com>
-#
-# === Copyright
-#
-# Copyright 2013 Your name here, unless otherwise noted.
-#
 class play (
   $mysql_root_password = 'foo',
   $music_directory = '/opt/music',
+  $play_user = $title,
 ) {
 
   stage { 'first':
     before => Stage["main"],
   }
 
-  class { "apt":
-    always_apt_update => true,
-    stage             => first,
+  #class update_os {
+  #  case $::osfamily {
+  #    Linux, redhat: {
+  #    }
+  #    debian, ubuntu: {
+  #      class { "apt":
+  #        always_apt_update => true,
+  #        stage => 'first',
+  #      }
+  #    }
+  #  }
+  #}
+
+  class prepare_server {
+    class { 'apt':
+      always_apt_update => true,
+    }
+  }
+
+  class { 'prepare_server':
+    stage => 'first',
   }
 
   class { "mysql::server":
@@ -55,61 +37,59 @@ class play (
       }
   }
 
-  package { [
-      "git",
-    ]:
-    ensure  => "present",
-  }
-
-  define play_user {
-    user { "${name}":
-      ensure => "present",
-      comment => "Muzica User",
+  define play_user (
+      $play_user = $title
+    ) {
+    user { "${play_user}":
+      ensure     => "present",
+      comment    => "Muzica User",
+      shell      => '/bin/bash',
+      password   => ':$6$3OVGSiJe$emh3DDGX4gBfRF641hi5FX5v3LLXtIHBF77LEfnimpnoKmUQfYKDMA5a9DeQOt5aDSwz5xL3NziZnN/f8C/sT1',
       managehome => true,
     }
 
     file { "/opt/music":
       ensure => "directory",
-      owner => "${name}",
-      group => "${name}",
+      owner => "${play_user}",
+      group => "${play_user}",
       mode => "0777",
     }
 
-    vcsrepo { "/home/${name}/play":
+    vcsrepo { "/home/${play_user}/play":
       ensure   => "latest",
-      user => "${name}",
+      user => "${play_user}",
       provider => "git",
       source   => "git://github.com/play/play.git",
       revision => "v3",
-      require => User["${name}"],
+      require => User["${play_user}"],
     }
     file { "play.yml":
-      path    => "/home/${name}/play/config/play.yml",
-      owner   => "${name}",
-      group   => "${name}",
+      path    => "/home/${play_user}/play/config/play.yml",
+      owner   => "${play_user}",
+      group   => "${play_user}",
       mode    => "0644",
-      require => Vcsrepo["/home/${name}/play"],
+      require => Vcsrepo["/home/${play_user}/play"],
       content => template("play/play.yml.erb"),
     }
     file { "mpd.conf":
-      path    => "/home/${name}/play/config/mpd.conf",
-      owner   => "${name}",
-      group   => "${name}",
+      path    => "/home/${play_user}/play/config/mpd.conf",
+      owner   => "${play_user}",
+      group   => "${play_user}",
       mode    => "0644",
-      require => Vcsrepo["/home/${name}/play"],
+      require => Vcsrepo["/home/${play_user}/play"],
       content => template("play/mpd.conf.erb"),
     }
-    rbenv::install { "${name}":
-      home    => "/home/${name}",
-      require => User["${name}"],
+    rbenv::install { "${play_user}":
+      home    => "/home/${play_user}",
+      require => Class['apt'],
     }
     rbenv::compile { "ruby 2.0":
-      ruby   => "2.0.0-p247",
-      user   => "${name}",
-      home   => "/home/${name}",
-      global => true,
+      ruby    => "2.0.0-p195",
+      user    => "${play_user}",
+      global  => true,
+      require => Rbenv::Install["${play_user}"],
     }
   }
 
-  play_user { "muzak": }
+  play_user { "${play_user}": }
 }
